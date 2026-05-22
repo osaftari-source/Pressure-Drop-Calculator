@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#185FA5">
+  <meta name="description" content="Industrial pipe pressure drop calculator — Darcy-Weisbach and Hazen-Williams · v1.1.4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="PD Calc">
+  <link rel="manifest" href="manifest.json?v=1.1.4">
+  <link rel="icon" href="icons/icon-192.png?v=1.1.4">
+  <link rel="apple-touch-icon" href="icons/icon-192.png?v=1.1.4">
+  <link rel="stylesheet" href="css/style.css?v=1.1.4">
+  <title>Pressure Drop Calculator</title>
+</head>
+<body>
+
+<div id="offline-banner">You are offline — the app is running from cache.</div>
+
+<div class="app">
+  <header class="hero">
+    <div class="hero-top">
+      <div class="hero-brand">
+        <div class="hero-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48" role="img">
+            <path d="M7 20h22v8H7z"/>
+            <path d="M29 18h7v12h-7z"/>
+            <path d="M36 21h5v6h-5z"/>
+            <path d="M12 16h12v4H12z"/>
+            <path d="M15 29v6m8-6v6M11 36h8m0 0h8" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M30 35l4-8 3 5h5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <p class="hero-eyebrow">ENGINEERING TOOLKIT</p>
+          <h1>Pressure Drop Calculator</h1>
+        </div>
+      </div>
+      <span class="trial-pill">Trial v1.1.4</span>
+    </div>
+    <p class="hero-desc">Preliminary pressure drop estimation for industrial piping systems.</p>
+    <div class="warning-strip">
+      <span class="warning-dot"></span>
+      Preliminary only — verify fluid properties, calculation method, and project design criteria for detailed design.
+    </div>
+  </header>
+
+  <!-- Step 1: Fluid -->
+  <section class="card step-fluid">
+    <div class="step-header">
+      <div class="step-num">1</div>
+      <div class="step-label">Select Fluid</div>
+    </div>
+    <div class="g3">
+      <div class="field span-2">
+        <label for="fluid-type">Fluid</label>
+        <select id="fluid-type">
+          <option value="water">Water (20°C)</option>
+          <option value="water_hot">Hot water (80°C)</option>
+          <option value="seawater">Seawater</option>
+          <option value="glycol">Ethylene glycol 40%</option>
+          <option value="chemical">Chemical liquid (generic)</option>
+          <option value="oil_light">Light oil SG 0.80</option>
+          <option value="oil_crude">Crude oil SG 0.87</option>
+          <option value="air">Air (operating condition)</option>
+          <option value="nat_gas">Natural gas (operating condition)</option>
+          <option value="steam">Steam (operating condition)</option>
+          <option value="custom_fluid">Custom fluid</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Fluid class</label>
+        <div class="readout" id="fluid-class">—</div>
+      </div>
+    </div>
+
+    <div class="g3 mt12 hidden" id="custom-fluid-fields">
+      <div class="field">
+        <label for="cust-rho">Density ρ (kg/m³) <span class="input-tag example-tag">Required input</span></label>
+        <input type="number" id="cust-rho" placeholder="e.g., 1000" min="0.01" step="0.01">
+      </div>
+      <div class="field">
+        <label for="cust-mu">Viscosity μ (cP) <span class="input-tag example-tag">Required input</span></label>
+        <input type="number" id="cust-mu" placeholder="e.g., 1.0" min="0.001" step="0.001">
+      </div>
+      <div class="field">
+        <label for="cust-name">Fluid name</label>
+        <input type="text" id="cust-name" placeholder="e.g., Process liquid">
+      </div>
+    </div>
+
+    <div class="info-row">
+      <div class="info-item">ρ <span id="fl-rho">—</span> kg/m³</div>
+      <div class="info-item">μ <span id="fl-mu">—</span> cP</div>
+    </div>
+
+    <div class="field mt12">
+      <label for="velocity-basis">Velocity guideline basis</label>
+      <select id="velocity-basis"></select>
+      <p class="field-help">Suggested reference basis from the selected fluid. Verify that it matches your actual service. It does not change the pressure drop calculation.</p>
+    </div>
+  </section>
+
+  <!-- Step 2: Method -->
+  <section class="card step-method">
+    <div class="step-header">
+      <div class="step-num">2</div>
+      <div class="step-label">Calculation Method</div>
+    </div>
+
+    <div class="field">
+      <label>Calculation method</label>
+      <div class="method-toggle" id="calc-method-toggle">
+        <button class="mtbtn active" id="btn-darcy" type="button" data-method="darcy">Darcy-Weisbach</button>
+        <button class="mtbtn" id="btn-hazen" type="button" data-method="hazen">Hazen-Williams</button>
+      </div>
+    </div>
+
+    <div class="field mt12" id="minor-method-wrap">
+      <label>Minor loss method</label>
+      <div class="method-toggle">
+        <button class="mtbtn active" id="btn-leq" type="button" data-minor="leq">L/D Method</button>
+        <button class="mtbtn" id="btn-k" type="button" data-minor="k">K-Method</button>
+      </div>
+    </div>
+
+    <div class="g3 mt12 hidden" id="hazen-c-wrap">
+      <div class="field">
+        <label for="hazen-c">Hazen-Williams C <span id="hazen-c-tag" class="input-tag reference-tag">Reference value</span></label>
+        <input type="number" id="hazen-c" class="reference-input" value="130" min="1" step="1">
+      </div>
+      <div class="field span-2">
+        <label>Minor loss basis</label>
+        <div class="readout">L/D / equivalent length only</div>
+      </div>
+    </div>
+
+    <div class="note-card mt12" id="method-guidance">—</div>
+  </section>
+
+  <!-- Step 3: Pipe and flow -->
+  <section class="card step-pipe">
+    <div class="step-header">
+      <div class="step-num">3</div>
+      <div class="step-label">Define Pipe &amp; Flow</div>
+    </div>
+
+    <div class="g3">
+      <div class="field">
+        <label for="nps">NPS</label>
+        <select id="nps"></select>
+      </div>
+      <div class="field">
+        <label for="schedule">Schedule</label>
+        <select id="schedule"></select>
+      </div>
+      <div class="field">
+        <label for="material">Material / roughness</label>
+        <select id="material">
+          <option value="cs_comm">CS — commercial (ε 0.046 mm)</option>
+          <option value="cs_new">CS — new (ε 0.025 mm)</option>
+          <option value="ss">Stainless steel (ε 0.015 mm)</option>
+          <option value="pvc">PVC / CPVC (ε 0.0015 mm)</option>
+          <option value="ci">Cast iron (ε 0.26 mm)</option>
+          <option value="duct_iron">Ductile iron (ε 0.12 mm)</option>
+          <option value="concrete">Concrete (ε 1.0 mm)</option>
+          <option value="copper">Copper / brass (ε 0.0015 mm)</option>
+          <option value="custom_mat">Custom roughness</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field mt12 hidden" id="custom-roughness-field">
+      <label for="custom-eps">Roughness ε (mm) <span class="input-tag example-tag">Required input</span></label>
+      <input type="number" id="custom-eps" placeholder="e.g., 0.046" min="0.0001" step="0.001" style="max-width:180px">
+    </div>
+
+    <p class="entry-note mt12"><span class="input-tag example-tag">Example</span> Gray values are examples only. Enter the actual line data before calculating.</p>
+    <div class="g3 mt12">
+      <div class="field">
+        <label for="pipe-len">Straight pipe length (m)</label>
+        <input type="number" id="pipe-len" class="user-required-input" placeholder="e.g., 50" min="0" step="0.5">
+      </div>
+      <div class="field">
+        <label for="elevation">Elevation difference (m)</label>
+        <input type="number" id="elevation" class="user-required-input" placeholder="e.g., 0" step="0.5">
+      </div>
+      <div class="field">
+        <label for="flowrate">Flow rate</label>
+        <input type="number" id="flowrate" class="user-required-input" placeholder="e.g., 50" min="0.001" step="1">
+      </div>
+    </div>
+
+    <div class="g3 mt12">
+      <div class="field">
+        <label for="flow-unit">Flow unit</label>
+        <select id="flow-unit">
+          <option value="m3h">m³/hour</option>
+          <option value="lps">liter/second</option>
+          <option value="gpm">GPM</option>
+          <option value="m3s">m³/second</option>
+          <option value="kgh">kg/hour</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Velocity preview</label>
+        <div class="readout"><span id="fl-vel">—</span> m/s</div>
+      </div>
+      <div class="field">
+        <label>Reynolds preview</label>
+        <div class="readout"><span id="fl-re">—</span> · <span id="fl-regime">—</span></div>
+      </div>
+    </div>
+
+    <div class="info-row">
+      <div class="info-item">OD <span id="info-od">—</span> mm</div>
+      <div class="info-item">WT <span id="info-wt">—</span> mm</div>
+      <div class="info-item">ID <span id="info-id">—</span> mm</div>
+      <div class="info-item">Area <span id="info-area">—</span> cm²</div>
+      <div class="info-item">ε/D <span id="info-ed">—</span></div>
+    </div>
+  </section>
+
+  <!-- Step 4: Fittings -->
+  <section class="card step-fittings">
+    <div class="step-header">
+      <div class="step-num">4</div>
+      <div class="step-label">Define Fittings / Minor Losses</div>
+    </div>
+    <p class="helper">Enter the quantity of each fitting used. Fittings without data for the selected method will be shown as <strong>Not calculated</strong> and will not be calculated using another method.</p>
+    <div class="fitting-grid" id="fitting-grid"></div>
+  </section>
+
+  <div id="validation-box" class="validation-box hidden"></div>
+  <button class="calc-btn" id="calc-btn">Calculate pressure drop</button>
+
+  <!-- Results -->
+  <section id="results" class="hidden">
+    <div class="divider"></div>
+    <div class="step-header">
+      <div class="step-num success-step">✓</div>
+      <div class="step-label">Calculation results</div>
+    </div>
+
+    <div class="result-card full-result">
+      <span class="badge" id="result-method-badge">—</span>
+      <div class="metric-2">
+        <div class="metric accent-blue">
+          <p class="mlabel">Total ΔP</p>
+          <p class="mvalue" id="out-dp">—</p>
+          <p class="munit">kg/cm²</p>
+        </div>
+        <div class="metric accent-blue">
+          <p class="mlabel">Velocity</p>
+          <p class="mvalue" id="out-vel">—</p>
+          <p class="munit">m/s</p>
+        </div>
+        <div class="metric" id="metric-re">
+          <p class="mlabel">Reynolds</p>
+          <p class="mvalue" id="out-re">—</p>
+          <p class="munit" id="out-regime">—</p>
+        </div>
+        <div class="metric" id="metric-factor">
+          <p class="mlabel" id="out-factor-label">Friction factor</p>
+          <p class="mvalue" id="out-factor">—</p>
+          <p class="munit" id="out-factor-unit">—</p>
+        </div>
+      </div>
+      <div class="sub-info" id="result-summary">—</div>
+    </div>
+
+    <div class="card">
+      <span class="badge badge-amber">Breakdown losses</span>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Head (m)</th>
+              <th>ΔP (kg/cm²)</th>
+            </tr>
+          </thead>
+          <tbody id="component-breakdown-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <span class="badge badge-teal">Fitting status</span>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Fitting</th>
+              <th>Qty</th>
+              <th>Data used</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="fitting-status-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <span class="badge badge-red">Velocity check</span>
+      <div class="velocity-summary">
+        <div class="velocity-item"><span>Calculated velocity</span><strong id="vel-calculated">—</strong></div>
+        <div class="velocity-item"><span>Reference basis</span><strong id="vel-basis-output">—</strong></div>
+        <div class="velocity-item"><span>Reference velocity</span><strong id="vel-range-output">—</strong></div>
+      </div>
+      <p id="vel-check" class="vel-ok">—</p>
+      <p class="reference-note">Reference basis: <em>Introduction to Process Engineering and Design</em>, Table 5.1 — Recommended Fluid Velocities.</p>
+    </div>
+
+    <div class="card">
+      <span class="badge badge-blue">Calculation Notes &amp; Limitations</span>
+      <ul class="notes-list" id="engineering-notes"></ul>
+    </div>
+  </section>
+
+  <section class="card update-panel">
+    <div class="update-tools">
+      <div>
+        <span class="badge badge-blue">Application Update</span>
+        <p class="update-copy">The app checks for updated versions automatically. Use this button when you know an update has been published but the notification has not appeared.</p>
+      </div>
+      <div class="update-actions">
+        <button id="checkUpdatesBtn" class="secondary-btn" type="button">Check for updates</button>
+        <span id="updateStatus" class="update-status" aria-live="polite">Current version: v1.1.4</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="app-footer">
+    <div>Developed by <strong>Osman Saftari</strong></div>
+    <div>Engineering Toolkit · Trial/Internal Testing · v1.1.4</div>
+  </footer>
+</div>
+
+<div id="install-bar">
+  <p>Install this app<span>Offline access, faster launch</span></p>
+  <button id="btn-install">Install</button>
+  <button id="btn-dismiss" aria-label="Close">×</button>
+</div>
+
+<div id="updateBanner" class="update-banner hidden" role="status" aria-live="polite">
+  <div class="update-banner-copy">
+    <strong>New version available</strong>
+    <span>An updated version of Pressure Drop Calculator is ready.</span>
+  </div>
+  <button id="updateNowBtn" class="update-btn" type="button">Update now</button>
+</div>
+
+<script src="js/data.js?v=1.1.4"></script>
+<script src="js/calc.js?v=1.1.4"></script>
+<script src="js/ui.js?v=1.1.4"></script>
+<script>
+  window.addEventListener('offline', () => { document.getElementById('offline-banner').style.display = 'block'; });
+  window.addEventListener('online', () => { document.getElementById('offline-banner').style.display = 'none'; });
+
+  let deferredPrompt = null;
+  const installBar = document.getElementById('install-bar');
+  const btnInstall = document.getElementById('btn-install');
+  const btnDismiss = document.getElementById('btn-dismiss');
+  window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault();
+    deferredPrompt = event;
+    installBar.style.display = 'flex';
+  });
+  btnInstall.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    installBar.style.display = 'none';
+  });
+  btnDismiss.addEventListener('click', () => { installBar.style.display = 'none'; });
+  window.addEventListener('appinstalled', () => { installBar.style.display = 'none'; });
+
+  // Safe PWA update handling: mirror the stable Pipe Support Span update pattern.
+  // Do not manually delete active caches before a replacement worker is ready.
+  let appSwRegistration = null;
+  let appRefreshing = false;
+  const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  const isSecureAppHost = isLocal || location.protocol === 'https:';
+
+  function showUpdateBanner() {
+    document.getElementById('updateBanner').classList.remove('hidden');
+  }
+  function hideUpdateBanner() {
+    document.getElementById('updateBanner').classList.add('hidden');
+  }
+  function setUpdateStatus(message) {
+    document.getElementById('updateStatus').textContent = message;
+  }
+  async function checkForAppUpdate() {
+    if (!navigator.onLine) {
+      setUpdateStatus('Connect to the internet before checking for an update.');
+      return;
+    }
+    if (!appSwRegistration) {
+      setUpdateStatus('Update checking is unavailable in this browser.');
+      return;
+    }
+    const button = document.getElementById('checkUpdatesBtn');
+    button.disabled = true;
+    setUpdateStatus('Checking for updates...');
+    try {
+      await appSwRegistration.update();
+      if (appSwRegistration.waiting) {
+        showUpdateBanner();
+        setUpdateStatus('New version available.');
+      } else {
+        setUpdateStatus('You are using the latest available version.');
+      }
+    } catch (error) {
+      setUpdateStatus('Could not check for updates. Check your connection.');
+    } finally {
+      button.disabled = false;
+    }
+  }
+  async function initAppUpdateHandling() {
+    const checkButton = document.getElementById('checkUpdatesBtn');
+    const updateNow = document.getElementById('updateNowBtn');
+    checkButton.addEventListener('click', checkForAppUpdate);
+
+    if (!('serviceWorker' in navigator) || !isSecureAppHost) {
+      setUpdateStatus('Updates are managed by the browser on this connection.');
+      checkButton.disabled = true;
+      return;
+    }
+    try {
+      appSwRegistration = await navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' });
+      if (appSwRegistration.waiting) showUpdateBanner();
+
+      appSwRegistration.addEventListener('updatefound', () => {
+        const newWorker = appSwRegistration.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateBanner();
+            setUpdateStatus('New version available.');
+          }
+        });
+      });
+
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (appRefreshing) return;
+        appRefreshing = true;
+        window.location.reload();
+      });
+
+      updateNow.addEventListener('click', () => {
+        if (appSwRegistration && appSwRegistration.waiting) {
+          updateNow.textContent = 'Updating...';
+          appSwRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        } else {
+          hideUpdateBanner();
+          window.location.reload();
+        }
+      });
+    } catch (error) {
+      setUpdateStatus('Update checking unavailable.');
+      checkButton.disabled = true;
+    }
+  }
+  window.addEventListener('load', initAppUpdateHandling);
+</script>
+</body>
+</html>
