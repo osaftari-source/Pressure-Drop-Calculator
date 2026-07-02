@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#185FA5">
-  <meta name="description" content="Industrial pipe pressure drop calculator — Darcy-Weisbach and Hazen-Williams · v1.1.4">
+  <meta name="description" content="Industrial pipe pressure drop calculator — Darcy-Weisbach and Hazen-Williams · v1.1.5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="PD Calc">
-  <link rel="manifest" href="manifest.json?v=1.1.4">
-  <link rel="icon" href="icons/icon-192.png?v=1.1.4">
-  <link rel="apple-touch-icon" href="icons/icon-192.png?v=1.1.4">
-  <link rel="stylesheet" href="css/style.css?v=1.1.4">
+  <link rel="manifest" href="manifest.json?v=1.1.5">
+  <link rel="icon" href="icons/icon-192.png?v=1.1.5">
+  <link rel="apple-touch-icon" href="icons/icon-192.png?v=1.1.5">
+  <link rel="stylesheet" href="css/style.css?v=1.1.5">
   <title>Pressure Drop Calculator</title>
 </head>
 <body>
@@ -37,7 +37,7 @@
           <h1>Pressure Drop Calculator</h1>
         </div>
       </div>
-      <span class="trial-pill">Trial v1.1.4</span>
+      <span class="trial-pill">Trial v1.1.5</span>
     </div>
     <p class="hero-desc">Preliminary pressure drop estimation for industrial piping systems.</p>
     <div class="warning-strip">
@@ -170,6 +170,31 @@
         </select>
       </div>
     </div>
+
+    <div class="g3 mt12 hidden" id="steam-condition-fields">
+      <div class="field">
+        <label for="steam-pressure">Steam pressure <span class="input-tag example-tag">Required for steam</span></label>
+        <input type="number" id="steam-pressure" class="user-required-input" placeholder="e.g., 42" min="0.001" step="0.01">
+      </div>
+      <div class="field">
+        <label for="steam-pressure-unit">Pressure unit</label>
+        <select id="steam-pressure-unit">
+          <option value="barG">barG</option>
+          <option value="barA">barA</option>
+          <option value="kgcm2G">kg/cm²G</option>
+          <option value="kgcm2A">kg/cm²A</option>
+          <option value="MPaG">MPaG</option>
+          <option value="MPaA">MPaA</option>
+          <option value="kPaG">kPaG</option>
+          <option value="kPaA">kPaA</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Steam density basis</label>
+        <div class="readout small-readout" id="steam-density-readout">Enter steam pressure</div>
+      </div>
+    </div>
+    <p class="field-help hidden" id="steam-pressure-help">Saturated steam density is estimated from the entered pressure using an internal saturation table interpolation. Flow rate remains part of Define Pipe &amp; Flow and can be entered as kg/hour.</p>
 
     <div class="field mt12 hidden" id="custom-roughness-field">
       <label for="custom-eps">Roughness ε (mm) <span class="input-tag example-tag">Required input</span></label>
@@ -328,14 +353,14 @@
       </div>
       <div class="update-actions">
         <button id="checkUpdatesBtn" class="secondary-btn" type="button">Check for updates</button>
-        <span id="updateStatus" class="update-status" aria-live="polite">Current version: v1.1.4</span>
+        <span id="updateStatus" class="update-status" aria-live="polite">Current version: v1.1.5</span>
       </div>
     </div>
   </section>
 
   <footer class="app-footer">
     <div>Developed by <strong>Osman Saftari</strong></div>
-    <div>Engineering Toolkit · Trial/Internal Testing · v1.1.4</div>
+    <div>Engineering Toolkit · Trial/Internal Testing · v1.1.5</div>
   </footer>
 </div>
 
@@ -353,9 +378,9 @@
   <button id="updateNowBtn" class="update-btn" type="button">Update now</button>
 </div>
 
-<script src="js/data.js?v=1.1.4"></script>
-<script src="js/calc.js?v=1.1.4"></script>
-<script src="js/ui.js?v=1.1.4"></script>
+<script src="js/data.js?v=1.1.5"></script>
+<script src="js/calc.js?v=1.1.5"></script>
+<script src="js/ui.js?v=1.1.5"></script>
 <script>
   window.addEventListener('offline', () => { document.getElementById('offline-banner').style.display = 'block'; });
   window.addEventListener('online', () => { document.getElementById('offline-banner').style.display = 'none'; });

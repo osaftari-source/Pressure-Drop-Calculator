@@ -48,8 +48,51 @@ const FLUID_DATA = {
   oil_crude:   {rho:870,   mu:25.0,   name:'Crude oil',                         hw_c:null,class:'liquid', service:'liquid'},
   air:         {rho:1.20,  mu:0.018,  name:'Air',                       hw_c:null,class:'gas',    service:'gas'},
   nat_gas:     {rho:0.717, mu:0.011,  name:'Natural gas',                       hw_c:null,class:'gas',    service:'gas'},
-  steam:       {rho:5.16,  mu:0.014,  name:'Steam',                             hw_c:null,class:'gas',    service:'gas'},
+  steam:       {rho:null,  mu:0.014,  name:'Steam',                             hw_c:null,class:'gas',    service:'gas'},
   custom_fluid:{rho:null,  mu:null,   name:'Custom fluid',                      hw_c:null,class:'custom', service:'custom'}
+};
+
+// Saturated steam vapor density reference table for preliminary calculation.
+// Pressure is absolute pressure in barA. Density is kg/m³.
+// Values are used by linear interpolation to estimate operating density from steam pressure.
+const SAT_STEAM_DENSITY_TABLE = [
+  {p_barA:0.5, rho:0.293},
+  {p_barA:1.0, rho:0.598},
+  {p_barA:1.5, rho:0.863},
+  {p_barA:2.0, rho:1.129},
+  {p_barA:3.0, rho:1.651},
+  {p_barA:4.0, rho:2.163},
+  {p_barA:5.0, rho:2.668},
+  {p_barA:6.0, rho:3.170},
+  {p_barA:7.0, rho:3.667},
+  {p_barA:8.0, rho:4.162},
+  {p_barA:9.0, rho:4.655},
+  {p_barA:10.0, rho:5.147},
+  {p_barA:12.0, rho:6.130},
+  {p_barA:15.0, rho:7.590},
+  {p_barA:20.0, rho:9.990},
+  {p_barA:25.0, rho:12.400},
+  {p_barA:30.0, rho:14.830},
+  {p_barA:35.0, rho:17.310},
+  {p_barA:40.0, rho:20.090},
+  {p_barA:45.0, rho:22.740},
+  {p_barA:50.0, rho:25.230},
+  {p_barA:60.0, rho:31.100},
+  {p_barA:70.0, rho:37.730},
+  {p_barA:80.0, rho:45.140},
+  {p_barA:90.0, rho:53.450},
+  {p_barA:100.0, rho:62.720}
+];
+
+const STEAM_PRESSURE_UNITS = {
+  barG:   {label:'barG',    toBarA:v => v + 1.01325},
+  barA:   {label:'barA',    toBarA:v => v},
+  kgcm2G: {label:'kg/cm²G', toBarA:v => v * 0.980665 + 1.01325},
+  kgcm2A: {label:'kg/cm²A', toBarA:v => v * 0.980665},
+  MPaG:   {label:'MPaG',    toBarA:v => v * 10 + 1.01325},
+  MPaA:   {label:'MPaA',    toBarA:v => v * 10},
+  kPaG:   {label:'kPaG',    toBarA:v => v / 100 + 1.01325},
+  kPaA:   {label:'kPaA',    toBarA:v => v / 100}
 };
 
 const FITTINGS = [

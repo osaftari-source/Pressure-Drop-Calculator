@@ -11,6 +11,41 @@ function getVelocityGuideline(id) {
   return VELOCITY_GUIDELINES.find(g => g.id === id) || VELOCITY_GUIDELINES[0];
 }
 
+function isSteamFluid(key) { return key === 'steam'; }
+
+function getSteamPressureInfo() {
+  const raw = $('steam-pressure') ? $('steam-pressure').value.trim() : '';
+  const pressure = parseFloat(raw);
+  const unit = $('steam-pressure-unit') ? $('steam-pressure-unit').value : 'barG';
+  const pressureBarA = steamPressureToBarA(pressure, unit);
+  const rho = saturatedSteamDensity(pressureBarA);
+  return { raw, pressure, unit, pressureBarA, rho };
+}
+
+function updateSteamConditionUI() {
+  const isSteam = $('fluid-type').value === 'steam';
+  toggleHidden('steam-condition-fields', !isSteam);
+  toggleHidden('steam-pressure-help', !isSteam);
+  const readout = $('steam-density-readout');
+  if (!readout) return;
+  if (!isSteam) {
+    readout.textContent = '—';
+    return;
+  }
+  const info = getSteamPressureInfo();
+  const minP = SAT_STEAM_DENSITY_TABLE[0].p_barA;
+  const maxP = SAT_STEAM_DENSITY_TABLE[SAT_STEAM_DENSITY_TABLE.length - 1].p_barA;
+  if (!info.raw) {
+    readout.textContent = 'Enter steam pressure';
+  } else if (!(info.pressure > 0) || !Number.isFinite(info.pressureBarA)) {
+    readout.textContent = 'Invalid pressure';
+  } else if (!Number.isFinite(info.rho)) {
+    readout.textContent = `Out of table range (${minP}–${maxP} barA)`;
+  } else {
+    readout.textContent = `${info.rho.toFixed(3)} kg/m³ at ${info.pressureBarA.toFixed(3)} barA`;
+  }
+}
+
 function buildVelocityGuidelineSelect() {
   const sel = $('velocity-basis');
   sel.innerHTML = '';
@@ -99,10 +134,15 @@ function getFluidProps() {
     };
   }
   const fd = FLUID_DATA[key];
+  if (key === 'steam') {
+    const info = getSteamPressureInfo();
+    return { key, rho: info.rho, mu: fd.mu, name: fd.name, class: fd.class, service: fd.service };
+  }
   return { key, rho: fd.rho, mu: fd.mu, name: fd.name, class: fd.class, service: fd.service };
 }
 
 function updateFlowInfo() {
+  updateSteamConditionUI();
   const fluid = getFluidProps();
   const geom = getPipeGeometry($('nps').value, $('schedule').value);
   setText('fl-rho', Number.isFinite(fluid.rho) ? fluid.rho.toFixed(3).replace(/\.000$/, '') : '—');
@@ -169,7 +209,7 @@ function updateMethodGuidance() {
   if (isWaterFluid(key)) {
     msg = 'Both Darcy-Weisbach and Hazen-Williams are available for water service. Darcy-Weisbach is more general. Hazen-Williams is commonly used for water piping with equivalent length approach.';
   } else if (isGasFluid(key)) {
-    msg = 'Darcy-Weisbach is available as a preliminary incompressible estimate. For detailed gas or steam design, compressible flow calculation and operating condition data are required.';
+    msg = 'Darcy-Weisbach is available as a preliminary estimate. For steam, saturated steam density is estimated from the entered pressure; for detailed steam design, verify steam properties and project criteria.';
   } else if (isCustomFluid(key)) {
     msg = 'Darcy-Weisbach is used for custom fluid. Ensure density and viscosity are entered at operating condition.';
   } else {
@@ -205,6 +245,13 @@ function validateInputs(inputs) {
   const errors = [];
   const geom = getPipeGeometry(inputs.nps, inputs.schedule);
   if (!geom) errors.push('Selected pipe size and schedule data is not available.');
+  if (inputs.fluidKey === 'steam') {
+    const minP = SAT_STEAM_DENSITY_TABLE[0].p_barA;
+    const maxP = SAT_STEAM_DENSITY_TABLE[SAT_STEAM_DENSITY_TABLE.length - 1].p_barA;
+    if (!Number.isFinite(inputs.steamPressure)) errors.push('Steam pressure is required for saturated steam calculation.');
+    else if (!(inputs.steamPressure > 0)) errors.push('Steam pressure must be greater than zero.');
+    else if (!Number.isFinite(inputs.steamPressureBarA) || !Number.isFinite(inputs.rho)) errors.push(`Steam pressure is outside the supported saturation table range (${minP}–${maxP} barA).`);
+  }
   if (!Number.isFinite(inputs.flowVal)) errors.push('Flow rate is required. Enter your actual flow rate.');
   else if (!(inputs.flowVal > 0)) errors.push('Flow rate must be greater than zero.');
   if (!Number.isFinite(inputs.pipeLen)) errors.push('Straight pipe length is required. Enter 0 if no straight pipe length is included.');
@@ -225,6 +272,7 @@ function validateInputs(inputs) {
 
 function getInputs() {
   const fluid = getFluidProps();
+  const steamInfo = getSteamPressureInfo();
   const fittingQty = {};
   FITTINGS.forEach(f => { fittingQty[f.id] = Number($('fit_' + f.id).value || 0); });
   return {
@@ -238,6 +286,9 @@ function getInputs() {
     fluidKey: fluid.key,
     rho: fluid.rho,
     mu_cp: fluid.mu,
+    steamPressure: steamInfo.pressure,
+    steamPressureUnit: steamInfo.unit,
+    steamPressureBarA: steamInfo.pressureBarA,
     flowVal: parseFloat($('flowrate').value),
     flowUnit: $('flow-unit').value,
     calcMethod,
@@ -282,7 +333,8 @@ function renderResults(res) {
     setText('out-factor-label', 'Friction factor');
     setText('out-factor', fmt(result.f, 5));
     setText('out-factor-unit', inputs.minorMethod === 'leq' ? 'Minor loss: L/D method' : 'Minor loss: K-method');
-    setText('result-summary', `Total head = ${fmt(result.totalHead, 3)} m · Total ΔP = ${fmt(result.dp_total_kpa, 2)} kPa.`);
+    const steamNote = inputs.fluidKey === 'steam' ? ` · Steam density = ${fmt(inputs.rho, 3)} kg/m³ at ${fmt(inputs.steamPressureBarA, 3)} barA` : '';
+    setText('result-summary', `Total head = ${fmt(result.totalHead, 3)} m · Total ΔP = ${fmt(result.dp_total_kpa, 2)} kPa${steamNote}.`);
   }
 
   const cbody = $('component-breakdown-body');
@@ -344,7 +396,7 @@ function renderEngineeringNotes(inputs) {
     'For detailed design, verify with project standard, vendor data, or recognized hydraulic references.'
   ];
   if (inputs.calcMethod === 'darcy') notes.splice(3, 0, 'Darcy-Weisbach uses incompressible flow approach.');
-  if (isGasFluid(inputs.fluidKey)) notes.splice(4, 0, 'Gas/air/steam results are preliminary unless density and viscosity are entered at operating condition.');
+  if (isGasFluid(inputs.fluidKey)) notes.splice(4, 0, 'Gas/air results are preliminary unless density and viscosity are entered at operating condition. For steam, saturated steam density is estimated from pressure; superheated steam is not yet modeled.');
   if (inputs.calcMethod === 'hazen') notes.splice(3, 0, 'Hazen-Williams is used only for water service with L/D / equivalent length approach.');
   const ul = $('engineering-notes');
   ul.innerHTML = notes.map(n => `<li>${n}</li>`).join('');
@@ -365,15 +417,20 @@ function bindEvents() {
   $('material').addEventListener('change', updatePipeInfo);
   $('custom-eps').addEventListener('input', updatePipeInfo);
   $('fluid-type').addEventListener('change', () => {
-    toggleHidden('custom-fluid-fields', $('fluid-type').value !== 'custom_fluid');
-    setSuggestedVelocityGuideline($('fluid-type').value);
+    const key = $('fluid-type').value;
+    toggleHidden('custom-fluid-fields', key !== 'custom_fluid');
+    toggleHidden('steam-condition-fields', key !== 'steam');
+    toggleHidden('steam-pressure-help', key !== 'steam');
+    if (key === 'steam' && !$('flowrate').value) $('flow-unit').value = 'kgh';
+    setSuggestedVelocityGuideline(key);
     updateMethodOptions(); updateFlowInfo();
   });
   $('velocity-basis').addEventListener('change', () => {
     if (!$('results').classList.contains('hidden')) renderVelocityCheck(parseFloat($('out-vel').textContent), $('velocity-basis').value);
   });
-  ['flowrate','flow-unit','cust-rho','cust-mu','pipe-len','elevation'].forEach(id => $(id).addEventListener('input', updateFlowInfo));
+  ['flowrate','flow-unit','cust-rho','cust-mu','pipe-len','elevation','steam-pressure'].forEach(id => $(id).addEventListener('input', updateFlowInfo));
   $('flow-unit').addEventListener('change', updateFlowInfo);
+  $('steam-pressure-unit').addEventListener('change', updateFlowInfo);
   $('hazen-c').addEventListener('input', () => {
     const input = $('hazen-c');
     const tag = $('hazen-c-tag');
@@ -395,6 +452,8 @@ document.addEventListener('DOMContentLoaded', () => {
   buildFittings();
   bindEvents();
   toggleHidden('custom-fluid-fields', true);
+  toggleHidden('steam-condition-fields', $('fluid-type').value !== 'steam');
+  toggleHidden('steam-pressure-help', $('fluid-type').value !== 'steam');
   updateMethodOptions();
   updateFlowInfo();
 });

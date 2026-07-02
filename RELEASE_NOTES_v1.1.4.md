@@ -1,4 +1,4 @@
-# Pressure Drop Calculator PWA v1.1.4 — Update Refresh Fix & Unified Header
+# Pressure Drop Calculator PWA v1.1.5 — Update Refresh Fix & Unified Header
 
 ## Corrective update
 - Replaced the v1.1.3 manual cache-clearing `Refresh App / Check for Update` mechanism.

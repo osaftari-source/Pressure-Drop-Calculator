@@ -1,15 +1,15 @@
-const CACHE_NAME = 'pd-calc-v1.1.4';
-const LEGACY_CACHE_TO_AUTO_UPGRADE = 'pd-calc-v1.1.3';
+const CACHE_NAME = 'pd-calc-v1.1.5';
+const LEGACY_CACHE_TO_AUTO_UPGRADE = 'pd-calc-v1.1.4';
 const ASSETS = [
   './',
   './index.html',
-  './css/style.css?v=1.1.4',
-  './js/data.js?v=1.1.4',
-  './js/calc.js?v=1.1.4',
-  './js/ui.js?v=1.1.4',
-  './manifest.json?v=1.1.4',
-  './icons/icon-192.png?v=1.1.4',
-  './icons/icon-512.png?v=1.1.4'
+  './css/style.css?v=1.1.5',
+  './js/data.js?v=1.1.5',
+  './js/calc.js?v=1.1.5',
+  './js/ui.js?v=1.1.5',
+  './manifest.json?v=1.1.5',
+  './icons/icon-192.png?v=1.1.5',
+  './icons/icon-512.png?v=1.1.5'
 ];
 
 self.addEventListener('install', event => {
@@ -18,7 +18,7 @@ self.addEventListener('install', event => {
     const keys = await caches.keys();
 
     // One-time bridge: v1.1.3 used a cache-clearing refresh button that could mix asset versions.
-    // Activate v1.1.4 immediately only when upgrading from that affected cache.
+    // Activate v1.1.5 immediately only when upgrading from that affected cache.
     if (keys.includes(LEGACY_CACHE_TO_AUTO_UPGRADE)) {
       await self.skipWaiting();
     }

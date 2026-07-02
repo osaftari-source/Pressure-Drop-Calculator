@@ -51,6 +51,28 @@ function getPipeGeometry(nps, schedule) {
   return { od, wt, id_mm, D, A, area_cm2: A * 1e4 };
 }
 
+
+function steamPressureToBarA(value, unit) {
+  const def = STEAM_PRESSURE_UNITS[unit];
+  if (!def || !Number.isFinite(value)) return NaN;
+  return def.toBarA(value);
+}
+
+function saturatedSteamDensity(pBarA) {
+  const table = SAT_STEAM_DENSITY_TABLE;
+  if (!Number.isFinite(pBarA)) return NaN;
+  if (pBarA < table[0].p_barA || pBarA > table[table.length - 1].p_barA) return NaN;
+  for (let i = 0; i < table.length - 1; i++) {
+    const a = table[i];
+    const b = table[i + 1];
+    if (pBarA >= a.p_barA && pBarA <= b.p_barA) {
+      const t = (pBarA - a.p_barA) / (b.p_barA - a.p_barA);
+      return a.rho + t * (b.rho - a.rho);
+    }
+  }
+  return table[table.length - 1].rho;
+}
+
 function buildFittingRows(inputs, hydraulics) {
   const { minorMethod, fittingQty } = inputs;
   const { D, f, rho, V } = hydraulics;
@@ -167,5 +189,12 @@ function calculate(inputs) {
   }
 
   const pipeInfo = { od: pipe.od, wt: pipe.wt, id: pipe.id_mm, area_cm2: pipe.area_cm2, eD };
-  return { result, fittingRows: fitting.rows, pipeInfo, fluid: FLUID_DATA[inputs.fluidKey], inputs };
+  const steam = inputs.fluidKey === 'steam' ? {
+    pressure: inputs.steamPressure,
+    pressureUnit: inputs.steamPressureUnit,
+    pressureBarA: inputs.steamPressureBarA,
+    density: inputs.rho,
+    condition: 'Saturated steam'
+  } : null;
+  return { result, fittingRows: fitting.rows, pipeInfo, fluid: FLUID_DATA[inputs.fluidKey], inputs, steam };
 }

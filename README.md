@@ -1,4 +1,4 @@
-# Pressure Drop Calculator PWA v1.1.4 — Trial Findings Update
+# Pressure Drop Calculator PWA v1.1.5 — Trial Findings Update
 
 Industrial pipe pressure drop calculator with a guided engineering workflow.
 
@@ -25,14 +25,22 @@ Deploy the folder contents to GitHub Pages, Netlify, Vercel, or another static h
 
 ## App signature
 
-Pressure Drop Calculator v1.1.4  
+Pressure Drop Calculator v1.1.5  
 Developed by Osman Saftari · Engineering Tools
 
 
-## v1.1.4 — Update Refresh Fix & Unified Header
+## v1.1.5 — Update Refresh Fix & Unified Header
 
 - Replaced the cache-clearing refresh behavior with a safe service-worker update prompt pattern.
 - Added a one-time upgrade bridge for clients still using the affected v1.1.3 cache.
 - Added versioned CSS/JavaScript asset URLs to prevent mixed static assets after an update.
 - Aligned the hero/header design with the Engineering Toolkit / Pipe Support Span visual language.
 - Retained velocity guideline and input clarity improvements introduced during the trial.
+
+
+## v1.1.5 — Saturated Steam Pressure Input
+
+- Added steam pressure input under Define Pipe & Flow when Steam is selected.
+- Flow rate remains under Define Pipe & Flow.
+- Saturated steam density is estimated from pressure and used for velocity, Reynolds number, and pressure drop.
+- Superheated steam is not yet modeled.

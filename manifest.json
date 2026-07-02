@@ -1,7 +1,7 @@
 {
   "name": "Pressure Drop Calculator",
   "short_name": "PD Calc",
-  "description": "Industrial pipe pressure drop calculator — Darcy-Weisbach & Hazen-Williams · v1.1.4",
+  "description": "Industrial pipe pressure drop calculator — Darcy-Weisbach & Hazen-Williams · v1.1.5",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
